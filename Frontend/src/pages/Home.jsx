@@ -1,9 +1,11 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import './Home.css';
 
 export default function Home() {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
   if (!user) {
     return (
@@ -33,6 +35,11 @@ export default function Home() {
               </span>
             </div>
           </div>
+          {user.roles && user.roles.length > 1 && (
+            <button onClick={() => navigate('/role-selection')} className="btn btn-secondary" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', marginRight: '0.5rem' }}>
+              Switch Role
+            </button>
+          )}
           <button onClick={logout} className="btn btn-secondary" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}>
             Logout
           </button>

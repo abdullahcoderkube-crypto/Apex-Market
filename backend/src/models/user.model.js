@@ -27,10 +27,15 @@ module.exports = (sequelize) => {
         allowNull: false,
       },
       role: {
-        type: DataTypes.ARRAY(DataTypes.ENUM('customer', 'vendor', 'admin')),
+        type: DataTypes.ARRAY(
+            DataTypes.ENUM({
+            values: ['customer', 'vendor', 'admin'],
+            name: 'enum_users_role' 
+            })
+        ),
         allowNull: false,
-        defaultValue: ['customer'],
-},
+        defaultValue: ['customer'] 
+      },
       isActive: {
         type: DataTypes.BOOLEAN,
         allowNull: false,

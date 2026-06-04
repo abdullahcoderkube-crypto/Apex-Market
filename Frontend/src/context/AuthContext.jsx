@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
+import { decodeToken } from '../utils/api';
 
 const AuthContext = createContext(null);
 
@@ -23,10 +24,37 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  const login = (userData, token) => {
+  const login = (token, chosenRole = null) => {
+    const decoded = decodeToken(token);
+    if (!decoded) return;
+
+    let roles = decoded.userRole || [];
+    if (!Array.isArray(roles)) {
+      roles = [roles];
+    }
+
+    // Determine the active role
+    const activeRole = chosenRole || (roles.length === 1 ? roles[0] : null);
+
+    const userData = {
+      name: decoded.userName || decoded.userEmail.split('@')[0],
+      email: decoded.userEmail,
+      roles: roles,
+      role: activeRole,
+    };
+
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
     localStorage.setItem('token', token);
+  };
+
+  const selectActiveRole = (role) => {
+    setUser((prevUser) => {
+      if (!prevUser) return null;
+      const updatedUser = { ...prevUser, role };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      return updatedUser;
+    });
   };
 
   const logout = () => {
@@ -36,7 +64,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, selectActiveRole }}>
       {children}
     </AuthContext.Provider>
   );
@@ -49,3 +77,4 @@ export const useAuth = () => {
   }
   return context;
 };
+

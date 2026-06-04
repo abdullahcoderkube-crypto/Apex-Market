@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { loginUser } from '../utils/api';
+import { loginUser, decodeToken } from '../utils/api';
 import './Login.css';
 
 export default function Login() {
@@ -45,17 +45,25 @@ export default function Login() {
         password: formData.password,
       });
 
-      // The Express API is expected to return { user: { name, email, role }, token }
-      // Or { token, user: { ... } } or similar. We adapt dynamically.
-      const userData = response.user || { name: response.name, email: response.email, role: response.role };
       const token = response.token;
 
       if (!token) {
         throw new Error('Authentication token not received from server.');
       }
 
-      login(userData, token);
-      navigate('/');
+      const decoded = decodeToken(token);
+      let roles = decoded?.userRole || [];
+      if (!Array.isArray(roles)) {
+        roles = [roles];
+      }
+
+      login(token);
+
+      if (roles.length > 1) {
+        navigate('/role-selection');
+      } else {
+        navigate('/');
+      }
     } catch (err) {
       console.error('Login error:', err);
       setError(err.message || 'Failed to sign in. Please check your credentials.');

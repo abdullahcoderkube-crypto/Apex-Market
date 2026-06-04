@@ -30,7 +30,8 @@ const loginUser = async (req, res) => {
     // if all correct, then issue a jwt token 
     const payload = {
         userEmail: email, 
-        userRole: isValidUser.toJSON().role
+        userRole: isValidUser.toJSON().role,
+        userName: isValidUser.toJSON().name
     }
 
     const jwtToken = await jwt.sign(payload, process.env.JWT_SECRET, {
