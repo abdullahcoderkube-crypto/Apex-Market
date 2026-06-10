@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { loginUser, decodeToken } from '../utils/api';
@@ -7,16 +7,26 @@ import './Login.css';
 export default function Login() {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
+  const [infoMessage, setInfoMessage] = useState('');
   const [loading, setLoading] = useState(false);
   
   const { login } = useAuth();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const msg = sessionStorage.getItem('session_expired_message');
+    if (msg) {
+      setInfoMessage(msg);
+      sessionStorage.removeItem('session_expired_message');
+    }
+  }, []);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    // Clear error when user types
+    // Clear alerts when user types
     if (error) setError('');
+    if (infoMessage) setInfoMessage('');
   };
 
   const validateForm = () => {
@@ -80,6 +90,7 @@ export default function Login() {
           <p className="login-subtitle">Sign in to your account to continue</p>
         </div>
 
+        {infoMessage && <div className="alert alert-info"><span>ℹ️</span> {infoMessage}</div>}
         {error && <div className="alert alert-error">{error}</div>}
 
         <form onSubmit={handleSubmit} noValidate>

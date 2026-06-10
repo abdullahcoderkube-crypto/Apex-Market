@@ -8,9 +8,17 @@ async function handleResponse(response) {
   const data = isJson ? await response.json() : null;
 
   if (!response.ok) {
+    if (response.status === 401) {
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      window.dispatchEvent(new CustomEvent('auth-unauthorized'));
+    }
     // If backend returns an error message, use that, otherwise default
-    const error = (data && data.message) || data?.error || `Request failed with status ${response.status}`;
-    return Promise.reject(new Error(error));
+    const errorMsg = (data && data.message) || data?.error || `Request failed with status ${response.status}`;
+    const err = new Error(errorMsg);
+    err.status = response.status;
+    err.data = data;
+    return Promise.reject(err);
   }
 
   return data;
@@ -142,8 +150,7 @@ export async function checkoutOrder(orderData) {
     ...orderData,
     userId: userId
   };
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/checkout`, {
+  const response = await fetch(`${API_BASE_URL}/api/checkout`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -152,14 +159,37 @@ export async function checkoutOrder(orderData) {
     body: JSON.stringify(payload),
   });
 
-  const result = await handleResponse(response);
-  if (result.success && result.url) {
-      window.location.href = result.url;
-    }
-  } catch(err) {
-    console.error(err)
-       console.error("Checkout processing failed:", err.message);
-      // Display error message to the user (e.g., alert or state-based notification)
-  }
-  
+  return handleResponse(response);
 }
+
+/**
+ * Fetch all orders for the logged-in customer based on their JWT token
+ */
+export async function getOrders() {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE_URL}/api/orders`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Fetch detailed information for a single order by ID
+ * @param {string} id - Order ID
+ */
+export async function getOrderById(id) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE_URL}/api/orders/${id}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+  return handleResponse(response);
+}
+

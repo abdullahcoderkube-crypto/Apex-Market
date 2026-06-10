@@ -93,15 +93,22 @@ export default function Checkout() {
       if (formData.paymentMethod === 'Stripe' && response?.url) {
         window.location.href = response.url;
       } else {
-        setSuccessMessage('🎉 Order placed successfully!');
-        setTimeout(() => {
-          navigate('/');
-        }, 3000);
+        navigate('/checkout/success');
       }
 
     } catch (err) {
       console.error(err);
-      setError(err.message || 'Checkout failed. Please try again.');
+      if (err.status === 409) {
+        navigate('/checkout/stock-conflict', {
+          state: {
+            outOfStockItems: err.data?.outOfStockItems || [],
+            formData,
+            cartItems
+          }
+        });
+      } else {
+        setError(err.message || 'Checkout failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

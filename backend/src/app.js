@@ -3,8 +3,8 @@ const authRouter = require('./routes/auth.routes')
 const inventoryRouter = require('./routes/inventory.routes')
 const productsRouter = require('./routes/products.routes')
 const checkoutRouter = require('./routes/checkout.routes')
+const ordersRouter = require('./routes/orders.routes')
 const handleStripeWebhook = require('./controllers/webhook.controller')
-//const webhookRouter = require('./routes/webhook.routes')
 const cors = require('cors');
 const app = express();
 
@@ -24,5 +24,8 @@ app.use('/api/products', productsRouter);
  
 // for checkout
 app.use('/api/checkout', checkoutRouter);
+
+// for order history
+app.use('/api/orders', ordersRouter);
 
 module.exports = app

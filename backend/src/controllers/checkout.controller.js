@@ -1,10 +1,12 @@
 const { Address, Order, OrderItem, Product, Payment, sequelize } = require('../models');
 const { Op } = require('sequelize');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const agenda = require('agenda');
+
 
 const processCheckout = async (req, res) => {
     const { fullName, address, city, state, postalCode, phoneNumber, userId, totalAmount, paymentMethod, items } = req.body;
-    console.log(req.body)
+
     let quantity = null;
     let orderId = null;
     try {
@@ -62,6 +64,7 @@ const processCheckout = async (req, res) => {
                 userId: userId,
                 addressId: userAddress.id,
                 totalAmount: totalAmount,
+                payment_method: paymentMethod,
                 expiresAt: new Date(Date.now() + (15 * 60 * 1000)) // Explicit Date object for Postgres timestamp
             }, { transaction: t });
 
@@ -101,8 +104,8 @@ const processCheckout = async (req, res) => {
                 quantity: 1,
             }],
             mode: 'payment',
-            success_url: 'http://localhost:5173/checkout',
-            cancel_url: 'http://localhost:5173/role-selection',
+            success_url: 'http://localhost:5173/checkout/success',
+            cancel_url: 'http://localhost:5173/checkout/failure',
     
             //Put your Order ID here!
             metadata: {

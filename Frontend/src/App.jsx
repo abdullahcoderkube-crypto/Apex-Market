@@ -7,6 +7,10 @@ import Home from './pages/Home';
 import RoleSelection from './pages/RoleSelection';
 import ProductDetail from './pages/ProductDetail';
 import Checkout from './pages/Checkout';
+import CheckoutSuccess from './pages/CheckoutSuccess';
+import CheckoutFailure from './pages/CheckoutFailure';
+import StockConflict from './pages/StockConflict';
+import Orders from './pages/Orders';
 // Protected Route Component: Restricts access to authenticated users only
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -124,10 +128,42 @@ export default function App() {
             }
           />
           <Route
+            path="/orders"
+            element={
+              <ProtectedRoute>
+                <Orders />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/checkout"
             element={
               <ProtectedRoute>
                 <Checkout />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/checkout/success"
+            element={
+              <ProtectedRoute>
+                <CheckoutSuccess />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/checkout/failure"
+            element={
+              <ProtectedRoute>
+                <CheckoutFailure />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/checkout/stock-conflict"
+            element={
+              <ProtectedRoute>
+                <StockConflict />
               </ProtectedRoute>
             }
           />

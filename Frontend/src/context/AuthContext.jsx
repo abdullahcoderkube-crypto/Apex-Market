@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
 import { decodeToken } from '../utils/api';
 
 const AuthContext = createContext(null);
@@ -6,6 +6,39 @@ const AuthContext = createContext(null);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const expirationTimeoutRef = useRef(null);
+
+  const logout = (isExpired = false) => {
+    setUser(null);
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    if (expirationTimeoutRef.current) {
+      clearTimeout(expirationTimeoutRef.current);
+      expirationTimeoutRef.current = null;
+    }
+    if (isExpired) {
+      sessionStorage.setItem('session_expired_message', 'Your login session expired, log-in again.');
+    }
+  };
+
+  const scheduleTokenExpiration = (token) => {
+    if (expirationTimeoutRef.current) {
+      clearTimeout(expirationTimeoutRef.current);
+      expirationTimeoutRef.current = null;
+    }
+
+    const decoded = decodeToken(token);
+    if (!decoded || !decoded.exp) return;
+
+    const remainingTime = decoded.exp * 1000 - Date.now();
+    if (remainingTime <= 0) {
+      logout(true);
+    } else {
+      expirationTimeoutRef.current = setTimeout(() => {
+        logout(true);
+      }, remainingTime);
+    }
+  };
 
   useEffect(() => {
     // Check if user credentials and token are stored in localStorage
@@ -13,15 +46,33 @@ export const AuthProvider = ({ children }) => {
     const storedToken = localStorage.getItem('token');
 
     if (storedUser && storedToken) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (error) {
-        console.error('Failed to parse stored user:', error);
-        localStorage.removeItem('user');
-        localStorage.removeItem('token');
+      const decoded = decodeToken(storedToken);
+      const isExpired = decoded && decoded.exp ? decoded.exp * 1000 < Date.now() : true;
+      if (isExpired) {
+        logout(true);
+      } else {
+        try {
+          setUser(JSON.parse(storedUser));
+          scheduleTokenExpiration(storedToken);
+        } catch (error) {
+          console.error('Failed to parse stored user:', error);
+          logout(true);
+        }
       }
     }
     setLoading(false);
+
+    const handleUnauthorized = () => {
+      logout(true);
+    };
+    window.addEventListener('auth-unauthorized', handleUnauthorized);
+
+    return () => {
+      if (expirationTimeoutRef.current) {
+        clearTimeout(expirationTimeoutRef.current);
+      }
+      window.removeEventListener('auth-unauthorized', handleUnauthorized);
+    };
   }, []);
 
   const login = (token, chosenRole = null) => {
@@ -46,6 +97,9 @@ export const AuthProvider = ({ children }) => {
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
     localStorage.setItem('token', token);
+    
+    // Schedule expiration
+    scheduleTokenExpiration(token);
   };
 
   const selectActiveRole = (role) => {
@@ -55,12 +109,6 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('user', JSON.stringify(updatedUser));
       return updatedUser;
     });
-  };
-
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
   };
 
   return (

@@ -22,6 +22,13 @@ module.exports = (sequelize) => {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: false,
       },
+      payment_method: {
+        type: DataTypes.ENUM(
+          'Stripe', 
+          'COD'
+        ),
+        allowNull: false
+      }, 
       status: {
         type: DataTypes.ENUM(
           'unpaid',

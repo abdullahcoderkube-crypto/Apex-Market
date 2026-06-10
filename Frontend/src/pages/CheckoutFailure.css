@@ -1,0 +1,133 @@
+.failure-page-bg {
+  background: radial-gradient(circle at top right, rgba(239, 68, 68, 0.05) 0%, transparent 50%),
+              radial-gradient(circle at bottom left, rgba(99, 102, 241, 0.05) 0%, transparent 50%);
+}
+
+.failure-card {
+  max-width: 500px;
+  width: 100%;
+  padding: 3rem 2rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.failure-icon-wrapper {
+  position: relative;
+  margin-bottom: 2rem;
+}
+
+.failure-icon {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #ffffff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 30px rgba(239, 68, 68, 0.4);
+  z-index: 2;
+  position: relative;
+}
+
+.failure-icon svg {
+  width: 36px;
+  height: 36px;
+  animation: strokeDraw 0.5s ease-in-out forwards 0.2s;
+  opacity: 0;
+  transform: scale(0.5);
+}
+
+.failure-icon-glow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #ef4444;
+  border-radius: 50%;
+  filter: blur(20px);
+  opacity: 0.3;
+  z-index: 1;
+  animation: failurePulse 2s infinite ease-in-out;
+}
+
+.failure-title {
+  font-size: 1.85rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  background: linear-gradient(135deg, var(--text-main), #ef4444);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.failure-subtitle {
+  color: var(--text-muted);
+  font-size: 1rem;
+  line-height: 1.6;
+  margin-bottom: 2rem;
+}
+
+.failure-advice {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  padding: 1.5rem;
+  margin-bottom: 2.5rem;
+  text-align: left;
+}
+
+.failure-advice h4 {
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+  color: var(--text-main);
+}
+
+.failure-advice ul {
+  padding-left: 1.25rem;
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.failure-advice li {
+  line-height: 1.4;
+}
+
+.failure-actions {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.try-again-btn {
+  width: 100%;
+  padding: 1rem;
+  font-size: 1rem;
+  background: linear-gradient(135deg, #ef4444, var(--primary));
+}
+
+.back-shop-btn {
+  width: 100%;
+  padding: 1rem;
+  font-size: 1rem;
+}
+
+@keyframes failurePulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.3;
+  }
+  50% {
+    transform: scale(1.25);
+    opacity: 0.5;
+  }
+}

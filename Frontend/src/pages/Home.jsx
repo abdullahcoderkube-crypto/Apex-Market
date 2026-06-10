@@ -213,13 +213,22 @@ export default function Home() {
             </button>
           )}
           {!isVendor && (
-            <button
-              onClick={() => navigate('/checkout')}
-              className="btn btn-primary"
-              style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', marginRight: '0.5rem', marginLeft: '0.5rem' }}
-            >
-              🛒 My Cart
-            </button>
+            <>
+              <button
+                onClick={() => navigate('/orders')}
+                className="btn btn-secondary"
+                style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', marginLeft: '0.5rem' }}
+              >
+                📦 My Orders
+              </button>
+              <button
+                onClick={() => navigate('/checkout')}
+                className="btn btn-primary"
+                style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', marginRight: '0.5rem', marginLeft: '0.5rem' }}
+              >
+                🛒 My Cart
+              </button>
+            </>
           )}
           <button
             onClick={logout}
