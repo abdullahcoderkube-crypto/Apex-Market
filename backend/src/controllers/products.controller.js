@@ -1,4 +1,3 @@
-const { raw } = require('express')
 const {Product} = require('../models')
 const {Op} = require('sequelize');
 
@@ -68,7 +67,7 @@ const getAllproducts = async (req, res) => {
                 stock: {
                     [Op.gt]: 0
                 }}, 
-            attributes: ['name', 'id', 'categoryId', 'price', 'imageUrl']
+            attributes: ['name', 'id', 'categoryId', 'price', 'image_urls']
         })
 
         res.status(200).json({
@@ -87,7 +86,7 @@ const getAllproducts = async (req, res) => {
 const getProductById = async (req, res) => {
     try {
         const productId = req.params.id;
-        const product = await Product.findByPk(productId, {attributes:['name', 'description', 'price', 'imageUrl']})
+        const product = await Product.findByPk(productId, {attributes:['name', 'description', 'price', 'image_urls']})
         res.status(200).json({
             success: true,
             product: product

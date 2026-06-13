@@ -11,6 +11,7 @@ export default function ProductDetail() {
   const [error, setError] = useState('');
   const [actionMessage, setActionMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   useEffect(() => {
     async function fetchProduct() {
@@ -20,6 +21,7 @@ export default function ProductDetail() {
         const response = await getProductById(id);
         if (response && response.success && response.product) {
           setProduct(response.product);
+          setActiveImageIndex(0);
         } else {
           setError('Product not found.');
         }
@@ -92,10 +94,12 @@ export default function ProductDetail() {
     );
   }
 
-  const { name, description, price, imageUrl } = product;
+  const { name, description, price, imageUrl, image_urls } = product;
 
-  // Placeholder image if none provided
-  const displayImage = imageUrl || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80';
+  // Placeholder images
+  const images = (image_urls && image_urls.length > 0)
+    ? image_urls
+    : (imageUrl ? [imageUrl] : ['https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80']);
 
   return (
     <div className="product-detail-page">
@@ -118,9 +122,25 @@ export default function ProductDetail() {
         )}
 
         <div className="product-detail-grid glass-panel">
-          {/* Left: Product Image */}
-          <div className="product-detail-image-wrapper">
-            <img src={displayImage} alt={name} className="product-detail-image" />
+          {/* Left: Product Image Gallery */}
+          <div className="product-detail-gallery">
+            <div className="product-detail-image-wrapper">
+              <img src={images[activeImageIndex] || images[0]} alt={name} className="product-detail-image" />
+            </div>
+            
+            {images.length > 1 && (
+              <div className="gallery-thumbnails">
+                {images.map((img, idx) => (
+                  <div 
+                    key={idx} 
+                    className={`gallery-thumbnail-container ${idx === activeImageIndex ? 'active' : ''}`}
+                    onClick={() => setActiveImageIndex(idx)}
+                  >
+                    <img src={img} alt={`${name} ${idx + 1}`} className="gallery-thumbnail-img" />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Right: Product Details */}

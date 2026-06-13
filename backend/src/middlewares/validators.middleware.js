@@ -47,15 +47,17 @@ const addProductRequestValidator = [
    body('productPrice').isNumeric().notEmpty().withMessage("A valid price is required"),
    body('productStock').isNumeric().notEmpty().withMessage("A valid stock quantity is required"),
    // custom validation for Image file
-   body('imageFile').custom((value, {req}) => {
-        if (!req.file) {
+   body('imageFiles').custom((value, {req}) => {
+        if (!req.files) {
             throw new Error("Product Image file required!")
         }
         // validate file type
         const allowedFiles = ['image/jpeg', 'image/png', 'image/webp']
-        if (!allowedFiles.includes(req.file.mimetype)) {
+        req.files.forEach(file => {
+            if (!allowedFiles.includes(file.mimetype)) {
             throw new Error("Invalid File format ")
         }
+        });
         return true
    }), 
    (req, res, next) => {

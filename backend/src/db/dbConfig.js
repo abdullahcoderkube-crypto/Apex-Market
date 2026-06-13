@@ -11,7 +11,7 @@ const sequelize = new Sequelize(
   process.env.DB_PASS,
   {
     host: process.env.DB_HOST,
-    port: Number(process.env.DB_PORT || 5432),
+    port: Number(process.env.DB_PORT),
     dialect: 'postgres',
     logging: false,
     pool: {
@@ -19,6 +19,12 @@ const sequelize = new Sequelize(
       min: 0,
       acquire: 30000,
       idle: 10000,
+    },
+    dialectOptions: {
+      ssl: {
+        require: true,                   // Forces SSL connection required by Supabase
+        rejectUnauthorized: false        // Prevents connection errors with cloud certificates
+      }
     },
     define: {
       underscored: true,

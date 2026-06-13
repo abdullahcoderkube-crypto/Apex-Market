@@ -128,7 +128,7 @@ export default function StockConflict() {
                   {unavailableDisplayItems.map((item, idx) => (
                     <div key={idx} className="conflict-item opacity-70">
                       <img
-                        src={item.imageUrl || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=100&auto=format&fit=crop&q=80'}
+                        src={(item.image_urls && item.image_urls.length > 0) ? item.image_urls[0] : (item.imageUrl || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=100&auto=format&fit=crop&q=80')}
                         alt={item.name}
                         className="conflict-item-img border-red"
                       />
@@ -153,7 +153,7 @@ export default function StockConflict() {
                   availableItems.map((item, idx) => (
                     <div key={idx} className="conflict-item">
                       <img
-                        src={item.imageUrl || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=100&auto=format&fit=crop&q=80'}
+                        src={(item.image_urls && item.image_urls.length > 0) ? item.image_urls[0] : (item.imageUrl || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=100&auto=format&fit=crop&q=80')}
                         alt={item.name}
                         className="conflict-item-img border-green"
                       />

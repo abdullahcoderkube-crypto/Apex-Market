@@ -150,7 +150,7 @@ export default function Checkout() {
                   const itemId = item.id || item.productId;
                   return (
                     <div key={idx} className="cart-item">
-                      <img src={item.imageUrl || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=100&auto=format&fit=crop&q=80'} alt={item.name} className="cart-item-img" />
+                      <img src={(item.image_urls && item.image_urls.length > 0) ? item.image_urls[0] : (item.imageUrl || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=100&auto=format&fit=crop&q=80')} alt={item.name} className="cart-item-img" />
                       <div className="cart-item-info">
                         <h4>{item.name}</h4>
                         <p>Qty: {item.quantity}</p>

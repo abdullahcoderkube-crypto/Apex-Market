@@ -36,7 +36,7 @@ const getOrderById = async (req, res) => {
           attributes: [
             'id',
             'name',
-            'imageUrl'
+            'image_urls'
           ]
         }
       ]

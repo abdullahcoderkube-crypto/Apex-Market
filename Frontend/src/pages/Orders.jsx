@@ -259,7 +259,8 @@ export default function Orders() {
                 <div className="detail-items-list">
                   {selectedOrder.items && selectedOrder.items.map((item, idx) => {
                     const itemName = item.productName || item.product?.name || 'Product';
-                    const itemImage = item.imageUrl || item.product?.imageUrl || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=100&auto=format&fit=crop&q=80';
+                    const productImgUrl = (item.product?.image_urls && item.product.image_urls.length > 0) ? item.product.image_urls[0] : item.product?.imageUrl;
+                    const itemImage = item.imageUrl || productImgUrl || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=100&auto=format&fit=crop&q=80';
                     return (
                       <div key={idx} className="detail-item-card">
                         <img

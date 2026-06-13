@@ -193,3 +193,71 @@ export async function getOrderById(id) {
   return handleResponse(response);
 }
 
+/**
+ * Fetch all orders that the logged-in vendor needs to process
+ */
+export async function getVendorOrders() {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE_URL}/api/vendor/orders`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Fetch all inventory products for the logged-in vendor
+ */
+export async function getVendorInventory() {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE_URL}/api/vendor/products`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Update a vendor product (name, description, price, stock, and/or imageFile)
+ * @param {FormData} formData
+ */
+export async function updateVendorProduct(formData) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE_URL}/api/vendor/products/update`, {
+    method: 'PATCH',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      // NOTE: Do NOT set Content-Type here — browser sets it automatically
+      // with the correct multipart boundary when using FormData.
+    },
+    body: formData,
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Remove or restore a product
+ * @param {string} productId 
+ * @param {boolean} isActive 
+ * @param {number} [stock] 
+ */
+export async function removeOrRestoreVendorProduct(productId, isActive, stock) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE_URL}/api/vendor/products/remove`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ productId, isActive, stock }),
+  });
+  return handleResponse(response);
+}
+
+

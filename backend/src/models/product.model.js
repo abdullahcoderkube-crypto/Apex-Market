@@ -35,9 +35,17 @@ module.exports = (sequelize) => {
         allowNull: false,
         defaultValue: 0,
       },
+      image_urls: {
+        type: DataTypes.ARRAY(DataTypes.TEXT),
+        defaultValue: [],
+        allowNull: true
+      },
       imageUrl: {
-        type: DataTypes.TEXT,
-        allowNull: true,
+        type: DataTypes.VIRTUAL,
+        get() {
+          const urls = this.getDataValue('image_urls');
+          return urls && urls.length > 0 ? urls[0] : null;
+        }
       },
       isActive: {
         type: DataTypes.BOOLEAN,
