@@ -1,7 +1,6 @@
 const { Address, Order, OrderItem, Product, Payment, sequelize } = require('../models');
 const { Op } = require('sequelize');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-const agenda = require('agenda');
 
 
 const processCheckout = async (req, res) => {
