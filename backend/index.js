@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({path: './.env'});
 const app = require('./src/app.js')
 const db = require('./src/models/index.js');
 const PORT = process.env.PORT
