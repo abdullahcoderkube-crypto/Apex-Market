@@ -94,7 +94,7 @@ export default function ProductDetail() {
     );
   }
 
-  const { name, description, price, imageUrl, image_urls } = product;
+  const { name, description, price, imageUrl, image_urls, stock } = product;
 
   // Placeholder images
   const images = (image_urls && image_urls.length > 0)
@@ -158,8 +158,17 @@ export default function ProductDetail() {
             </div>
 
             <div className="product-stock-status">
-              <span className="status-dot available"></span>
-              <span>In Stock & Ready to Ship</span>
+              {stock > 0 ? (
+                <>
+                  <span className="status-dot available"></span>
+                  <span>In Stock & Ready to Ship</span>
+                </>
+              ) : (
+                <>
+                  <span className="status-dot" style={{ backgroundColor: '#ef4444' }}></span>
+                  <span style={{ color: '#ef4444', fontWeight: '500' }}>Product Out of Stock, New Stock will arrive soon!</span>
+                </>
+              )}
             </div>
 
             <div className="product-actions">

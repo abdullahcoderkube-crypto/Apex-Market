@@ -64,10 +64,8 @@ const getAllproducts = async (req, res) => {
         const products = await Product.findAll({
             where: {
                 isActive: true,
-                stock: {
-                    [Op.gt]: 0
-                }}, 
-            attributes: ['name', 'id', 'categoryId', 'price', 'image_urls']
+            }, 
+            attributes: ['name', 'id', 'categoryId', 'price', 'image_urls', 'stock']
         })
 
         res.status(200).json({

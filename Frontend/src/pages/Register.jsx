@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { registerUser } from '../utils/api';
+import { registerUser, requestOtp } from '../utils/api';
 import './Register.css';
 
 export default function Register() {
@@ -17,6 +17,12 @@ export default function Register() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // OTP Verification States
+  const [showOtpScreen, setShowOtpScreen] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpError, setOtpError] = useState('');
+  const [otpLoading, setOtpLoading] = useState(false);
   
   const navigate = useNavigate();
 
@@ -103,19 +109,92 @@ export default function Register() {
     }
 
     try {
+      // First request OTP from backend
+      const result = await requestOtp(payload);
+      console.log('OTP Request Response:', result);
+      setSuccess(`YOUR OTP is sent on ${formData.email}`);
+      setShowOtpScreen(true);
+      setOtpError('');
+    } catch (err) {
+      console.error('OTP request error:', err);
+      setError(err.message || 'Failed to send OTP code. Please check your details.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOtpVerifyAndSubmit = async (e) => {
+    e.preventDefault();
+    if (!otpCode || otpCode.trim().length === 0) {
+      setOtpError('Please enter the verification code.');
+      return;
+    }
+
+    setOtpLoading(true);
+    setOtpError('');
+    setError('');
+    setSuccess('');
+
+    // Prepare register payload
+    const payload = {
+      name: formData.name,
+      email: formData.email,
+      password: formData.password,
+      role: formData.role,
+      otpCode: otpCode.trim(),
+    };
+
+    if (formData.role === 'vendor') {
+      payload.storeName = formData.storeName;
+      payload.businessAddress = formData.businessAddress;
+      payload.phoneNumber = formData.phoneNumber;
+    }
+
+    try {
       const result = await registerUser(payload);
-      console.log(result)
+      console.log('Registration Response:', result);
       setSuccess('Account created successfully! Redirecting to login...');
+      setOtpError('');
       
-      // Redirect to login after 2 seconds
+      // Close OTP screen and navigate to login
       setTimeout(() => {
+        setShowOtpScreen(false);
         navigate('/login');
       }, 2000);
     } catch (err) {
-      console.error('Registration error:', err);
-      setError(err.message || 'Registration failed. Please check your inputs or try another email.');
+      console.error('Registration verification error:', err);
+      setOtpError(err.message || 'Verification failed. Incorrect or expired OTP code.');
     } finally {
-      setLoading(false);
+      setOtpLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setOtpLoading(true);
+    setOtpError('');
+    setSuccess('');
+    
+    // Prepare payload dynamically
+    const payload = {
+      name: formData.name,
+      email: formData.email,
+      password: formData.password,
+      role: formData.role,
+    };
+
+    if (formData.role === 'vendor') {
+      payload.storeName = formData.storeName;
+      payload.businessAddress = formData.businessAddress;
+      payload.phoneNumber = formData.phoneNumber;
+    }
+
+    try {
+      await requestOtp(payload);
+      setSuccess(`YOUR OTP is sent on ${formData.email}`);
+    } catch (err) {
+      setOtpError(err.message || 'Failed to resend OTP code.');
+    } finally {
+      setOtpLoading(false);
     }
   };
 
@@ -294,6 +373,65 @@ export default function Register() {
           </Link>
         </div>
       </div>
+
+      {/* ── OTP Verification Modal ─────────────────────────────────────────── */}
+      {showOtpScreen && (
+        <div className="otp-modal-overlay" onClick={() => !otpLoading && setShowOtpScreen(false)} role="dialog" aria-modal="true" aria-labelledby="otp-modal-title">
+          <div className="otp-modal-panel glass-panel" onClick={e => e.stopPropagation()}>
+            <div className="otp-modal-header">
+              <div>
+                <h2 className="otp-modal-title" id="otp-modal-title">Verification Code</h2>
+                <p className="otp-modal-subtitle">Enter the 6-digit OTP code to verify your identity.</p>
+              </div>
+              <button className="otp-modal-close-btn" onClick={() => setShowOtpScreen(false)} aria-label="Close modal" disabled={otpLoading}>
+                ✕
+              </button>
+            </div>
+
+            <div className="otp-modal-body">
+              <div className="otp-message-alert">
+                <span className="otp-alert-icon">✉️</span>
+                <span className="otp-alert-text">YOUR OTP is sent on <strong>{formData.email}</strong></span>
+              </div>
+
+              {otpError && <div className="alert alert-error" role="alert">{otpError}</div>}
+              {success && <div className="alert alert-success" role="status">{success}</div>}
+
+              <form onSubmit={handleOtpVerifyAndSubmit} className="otp-form">
+                <div className="form-group">
+                  <label className="form-label" htmlFor="otpCodeInput">OTP Code</label>
+                  <input
+                    id="otpCodeInput"
+                    name="otpCode"
+                    type="text"
+                    pattern="[0-9]*"
+                    maxLength="6"
+                    className="form-input otp-code-input"
+                    placeholder="123456"
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                    disabled={otpLoading}
+                    required
+                    autoFocus
+                  />
+                </div>
+
+                <div className="otp-modal-actions">
+                  <button type="button" className="btn btn-secondary" onClick={() => setShowOtpScreen(false)} disabled={otpLoading}>
+                    Go Back
+                  </button>
+                  <button type="button" className="btn btn-secondary" onClick={handleResendOtp} disabled={otpLoading}>
+                    Resend OTP
+                  </button>
+                  <button type="submit" className="btn btn-primary" disabled={otpLoading} id="verify-otp-btn">
+                    {otpLoading ? <span className="spinner" /> : 'Verify & Register'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -2,7 +2,7 @@
 // Importing Sequelize constructor from the sequelize package.
 const { Sequelize } = require('sequelize');
 const path = require('path');
-require('dotenv').config({path: path.resolve(__dirname, '../.env')})
+require('dotenv').config({path: path.resolve(__dirname, '../../.env')})
 
 
 const sequelize = new Sequelize(
@@ -21,10 +21,10 @@ const sequelize = new Sequelize(
       idle: 10000,
     },
     dialectOptions: {
-      ssl: {
+      ssl: process.env.NODE_ENV === 'production' ? {
         require: true,                   // Forces SSL connection required by Supabase
         rejectUnauthorized: false        // Prevents connection errors with cloud certificates
-      }
+      } : false
     },
     define: {
       underscored: true,

@@ -8,6 +8,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '../../.env') })
 
 const registerUser = async (req, res) => {
     const { name, email, password, role, storeName, businessAddress, phoneNumber } = req.body;
+    
     let newUser = {}
     try {
         const doesExist = await User.findOne({

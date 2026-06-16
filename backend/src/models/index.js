@@ -2,6 +2,7 @@ const { sequelize } = require('../db/dbConfig');
 
 const User = require('./user.model')(sequelize);
 const Vendor = require('./vendor.model')(sequelize);
+const Otp = require('./otp.model')(sequelize);
 const Category = require('./category.model')(sequelize);
 const Product = require('./product.model')(sequelize);
 const Address = require('./address.model')(sequelize);
@@ -55,6 +56,7 @@ const db = {
   Sequelize: require('sequelize'),
   User,
   Vendor,
+  Otp,
   Category,
   Product,
   Address,

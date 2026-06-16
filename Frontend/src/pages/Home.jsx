@@ -184,10 +184,13 @@ export default function Home() {
   };
 
   const handleRemoveEditImage = (index) => {
+    // Ensure we are in replace mode when removing any image
+    setIsReplacingImages(true);
+    // Update previews
+    setEditImagePreviews(prev => prev.filter((_, i) => i !== index));
+    // Update the corresponding File objects if this preview was from a newly added file
     setEditFormData(prev => {
       const newFiles = prev.imageFiles.filter((_, i) => i !== index);
-      const previews = newFiles.map(f => URL.createObjectURL(f));
-      setEditImagePreviews(previews);
       return { ...prev, imageFiles: newFiles };
     });
   };
@@ -227,6 +230,7 @@ export default function Home() {
       data.append('description', editFormData.productDescription.trim());
       data.append('price', editFormData.productPrice);
       data.append('stock', editFormData.productStock);
+      data.append('isReplacingImages', isReplacingImages);
       if (isReplacingImages && editFormData.imageFiles && editFormData.imageFiles.length > 0) {
         editFormData.imageFiles.forEach(file => {
           data.append('imageFiles', file);
@@ -1249,17 +1253,13 @@ export default function Home() {
                     {editImagePreviews.map((src, index) => (
                       <div key={index} className="preview-image-container">
                         <img src={src} alt={`Preview ${index + 1}`} className="preview-image-item" />
-                        {isReplacingImages && (
-                          <button
-                            type="button"
-                            className="btn-remove-preview"
-                            onClick={() => handleRemoveEditImage(index)}
-                            title="Remove image"
-                            disabled={submitting}
-                          >
-                            ✕
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          className="btn-remove-preview"
+                          onClick={() => handleRemoveEditImage(index)}
+                          title="Remove image"
+                          disabled={submitting}
+                        >✕</button>
                       </div>
                     ))}
                   </div>

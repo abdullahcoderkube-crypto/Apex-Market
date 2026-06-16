@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://apex-market-bchl.onrender.com';
+const API_BASE_URL = process.env.NODE_ENV === 'production' ? 'https://apex-market-bchl.onrender.com': 'http://localhost:3000';
 
 /**
  * Helper to handle fetch responses and extract JSON or error messages.
@@ -30,6 +30,21 @@ async function handleResponse(response) {
  */
 export async function registerUser(userData) {
   const response = await fetch(`${API_BASE_URL}/auth/register`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(userData),
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Request an email verification OTP code
+ * @param {Object} userData - Registration payload { name, email, password, role, ... }
+ */
+export async function requestOtp(userData) {
+  const response = await fetch(`${API_BASE_URL}/auth/request-otp`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

@@ -59,8 +59,8 @@ const viewInventory = async (req, res) => {
 // Update a Product
 const updateProduct = async (req, res) => {
     try {
-        const { productId, name, description, price, stock } = req.body;
-
+        const { productId, name, description, price, stock, categoryId, isReplacingImages } = req.body;
+      
         if (!productId) {
             return res.status(400).json({ success: false, error: "Product ID is required" });
         }
@@ -81,28 +81,28 @@ const updateProduct = async (req, res) => {
         if (description !== undefined) updates.description = description;
         if (price !== undefined && !isNaN(price)) updates.price = parseFloat(price);
         if (stock !== undefined && !isNaN(stock) && Number(stock) >= 0) updates.stock = parseInt(stock, 10);
+        if (categoryId !== undefined) updates.categoryId = categoryId;
+        const replacing = isReplacingImages === 'true';
 
-        if (req.files) {
+        if (replacing) {
+            if (req.files && req.files.length > 0) {
+                // validate file type
+                const allowedFiles = ['image/jpeg', 'image/png', 'image/webp'];
+                req.files.forEach(file => {
+                    if (!allowedFiles.includes(file.mimetype)) {
+                        const error =  new Error("Invalid File format ");
+                        error.type = "INVALID FILE FORMAT";
+                        throw error;
+                    }
+                });
 
-            // validate file type
-            const allowedFiles = ['image/jpeg', 'image/png', 'image/webp']
-            req.files.forEach(file => {
-                if (!allowedFiles.includes(file.mimetype)) {
-                    const error =  new Error("Invalid File format ");
-                    error.type = "INVALID FILE FORMAT"
-                    throw error
-                }
-            });
-
-        // upload the images' buffers to cloudinary and store the image url
-
-        const uploadPromises = req.files.map(file => {
-            return uploadToCloudinary(file.buffer);
-        })
-        
-        const arrOfImgUrls = await Promise.all(uploadPromises);
-
-            updates.image_urls = arrOfImgUrls;
+                // upload the images' buffers to cloudinary and store the image url
+                const uploadPromises = req.files.map(file => uploadToCloudinary(file.buffer));
+                const arrOfImgUrls = await Promise.all(uploadPromises);
+                updates.image_urls = arrOfImgUrls;
+            } else {
+                updates.image_urls = [];
+            }
         }
 
         await product.update(updates);

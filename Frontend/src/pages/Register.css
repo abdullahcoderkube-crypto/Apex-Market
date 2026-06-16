@@ -168,3 +168,123 @@
     font-size: 1.75rem;
   }
 }
+
+/* OTP Verification Modal Overlay */
+.otp-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(10, 14, 23, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 1.5rem;
+  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.otp-modal-panel {
+  width: 100%;
+  max-width: 440px;
+  padding: 2rem;
+  border-radius: var(--border-radius-md);
+  border: 1px solid var(--border-color);
+  background: rgba(20, 27, 45, 0.7);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+  animation: scaleUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.otp-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+}
+
+.otp-modal-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-main);
+  background: linear-gradient(135deg, var(--text-main), var(--text-muted));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.otp-modal-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+
+.otp-modal-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  line-height: 1;
+  transition: color var(--transition-fast);
+}
+
+.otp-modal-close-btn:hover {
+  color: var(--text-main);
+}
+
+.otp-message-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  background-color: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: var(--border-radius-sm);
+  color: #a5b4fc;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  margin-bottom: 1.5rem;
+}
+
+.otp-alert-icon {
+  font-size: 1.25rem;
+}
+
+.otp-alert-text {
+  text-align: left;
+}
+
+.otp-alert-text strong {
+  color: var(--text-main);
+}
+
+.otp-code-input {
+  letter-spacing: 0.5em;
+  font-size: 1.5rem;
+  text-align: center;
+  font-weight: 700;
+  padding: 0.75rem;
+}
+
+.otp-code-input::placeholder {
+  letter-spacing: normal;
+  font-size: 1.1rem;
+  font-weight: 400;
+}
+
+.otp-modal-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-top: 2rem;
+}
+
+.otp-modal-actions button[type="submit"] {
+  grid-column: span 2;
+  margin-top: 0.5rem;
+}
+
+@keyframes scaleUp {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
