@@ -41,7 +41,7 @@ const getOrderById = async (req, res) => {
           include: [
             {
               model: Reviews,
-              as: 'review',
+              as: 'reviews',
               required: false,
               where: { user_id: req.user.userId }
             }

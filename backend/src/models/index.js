@@ -59,7 +59,7 @@ User.hasMany(Wishlist, {foreignKey: 'user_id', as: 'wishes'});
 Wishlist.belongsTo(User, {foreignKey: 'user_id', as: 'user'});
 
 // Product - Reviews
-Product.hasOne(Reviews, { foreignKey: 'product_id', as: 'review'});
+Product.hasMany(Reviews, { foreignKey: 'product_id', as: 'reviews' });
 Reviews.belongsTo(Product, {foreignKey: 'product_id', as: 'product'});
 
 

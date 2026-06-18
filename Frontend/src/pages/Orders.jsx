@@ -65,7 +65,7 @@ export default function Orders() {
       if (orderData && orderData.items) {
         orderData.items.forEach(item => {
           const itemId = item.productId || item.product?.id;
-          if (itemId && item.product?.review) {
+          if (itemId && item.product?.reviews && item.product.reviews.length > 0) {
             reviewed.add(itemId);
           }
         });

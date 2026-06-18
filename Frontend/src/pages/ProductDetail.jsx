@@ -15,6 +15,8 @@ export default function ProductDetail() {
   const [messageType, setMessageType] = useState('success');
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const [avgRating, setAvgRating] = useState(0);
+  const [reviews, setReviews] = useState([]);
 
   useEffect(() => {
     async function fetchProduct() {
@@ -24,6 +26,8 @@ export default function ProductDetail() {
         const response = await getProductById(id);
         if (response && response.success && response.product) {
           setProduct(response.product);
+          setAvgRating(response.avgRating || 0);
+          setReviews(response.product.reviews || []);
           setActiveImageIndex(0);
         } else {
           setError('Product not found.');
@@ -230,6 +234,23 @@ export default function ProductDetail() {
             <div className="product-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div style={{ flexGrow: 1 }}>
                 <h1 className="product-title">{name}</h1>
+                
+                {reviews.length > 0 ? (
+                  <div className="product-rating-summary">
+                    <span className="star-rating-stars">
+                      {Array.from({ length: 5 }).map((_, idx) => (
+                        <span key={idx} className={`star-icon ${idx < Math.round(avgRating) ? 'filled' : ''}`}>★</span>
+                      ))}
+                    </span>
+                    <span className="rating-value" style={{ marginLeft: '0.25rem' }}>{avgRating}</span>
+                    <span className="reviews-count" style={{ marginLeft: '0.25rem' }}>({reviews.length} customer review{reviews.length > 1 ? 's' : ''})</span>
+                  </div>
+                ) : (
+                  <div className="product-rating-summary no-rating">
+                    <span>No reviews yet</span>
+                  </div>
+                )}
+
                 <div className="product-price-tag">${parseFloat(price).toFixed(2)}</div>
               </div>
               {user && user.role === 'customer' && (
@@ -302,6 +323,60 @@ export default function ProductDetail() {
             </div>
           </div>
         </div>
+
+        {/* Customer Reviews Section */}
+        <div className="product-reviews-section glass-panel" style={{ marginTop: '2.5rem', padding: '2.5rem' }}>
+          <h2 className="reviews-section-title">Customer Reviews</h2>
+          
+          {reviews.length === 0 ? (
+            <div className="no-reviews-state">
+              <span className="no-reviews-icon">💬</span>
+              <p style={{ fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.25rem' }}>No reviews written for this product yet.</p>
+              <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', margin: 0 }}>Be the first to buy and leave your feedback!</p>
+            </div>
+          ) : (
+            <div className="reviews-display-grid">
+              {/* Rating Overview */}
+              <div className="rating-overview-card">
+                <div className="big-rating-number">{avgRating}</div>
+                <div className="stars-wrapper">
+                  {Array.from({ length: 5 }).map((_, idx) => (
+                    <span key={idx} className={`star-icon-big ${idx < Math.round(avgRating) ? 'filled' : ''}`}>★</span>
+                  ))}
+                </div>
+                <p className="overview-count">Based on {reviews.length} review{reviews.length > 1 ? 's' : ''}</p>
+              </div>
+
+              {/* Individual reviews list */}
+              <div className="reviews-list">
+                {reviews.map((rev) => {
+                  const reviewerName = rev.user?.name || 'Anonymous';
+                  const formattedDate = new Date(rev.createdAt).toLocaleDateString(undefined, {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                  });
+
+                  return (
+                    <div key={rev.id} className="review-comment-card">
+                      <div className="review-comment-header">
+                        <span className="reviewer-name">{reviewerName}</span>
+                        <span className="review-comment-date">{formattedDate}</span>
+                      </div>
+                      <div className="review-comment-stars">
+                        {Array.from({ length: 5 }).map((_, idx) => (
+                          <span key={idx} className={`star-icon-comment ${idx < rev.rating ? 'filled' : ''}`}>★</span>
+                        ))}
+                      </div>
+                      <p className="reviewer-text">{rev.comment}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
       </main>
     </div>
   );
