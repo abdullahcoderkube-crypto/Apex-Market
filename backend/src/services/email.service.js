@@ -19,7 +19,7 @@ const sendOrderConfirmationEmail = async(recepientEmail, orderId, amount, delive
         from: `Apex Vendor <${process.env.EMAIL_USER}>`,
         to: recepientEmail,
         subject: "Your order has been confirmed!",
-        text: `Order #${orderId} with amount of ${amount}$ has been successfully confirmed and will be delivered to ${deliveryAddress}`
+        text: `Order ${orderId} with amount of ${amount}$ has been successfully confirmed and will be delivered to ${deliveryAddress}`
     }
 
     await transporter.sendMail(mailOptions)
