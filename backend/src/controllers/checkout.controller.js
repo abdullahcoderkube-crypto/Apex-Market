@@ -1,7 +1,7 @@
-const { Address, Order, OrderItem, Product, Coupon, CouponUsage, sequelize} = require('../models');
+const { Address, Order, OrderItem, Product, Coupon, CouponUsage, User, sequelize} = require('../models');
 const { Op } = require('sequelize');
+const {sendOrderConfirmationEmail} = require('../services/email.service')
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-
 
 const processCheckout = async (req, res) => {
     const { fullName, address, city, state, postalCode, phoneNumber, userId, totalAmount, netAmount, paymentMethod, items, couponId } = req.body;
@@ -11,6 +11,15 @@ const processCheckout = async (req, res) => {
     try {
         // Track out-of-stock items outside the transaction scope
         let outOfStockItems = [];
+
+        // User email address for mail sending
+        const user = await User.findOne({
+            where: {
+                id: userId,
+            }, attributes: ['email']
+        });
+
+        const userEmail = user.email; 
 
         // Run EVERYTHING inside the managed transaction block
         await sequelize.transaction(async (t) => { 
@@ -104,7 +113,9 @@ const processCheckout = async (req, res) => {
         }); 
 
         // 7. Create a Stripe checkout session
-        const session = await stripe.checkout.sessions.create({
+        let stripeUrl = null;
+        if (paymentMethod === 'Stripe') {
+            const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
             line_items: [{
                 price_data: {
@@ -118,17 +129,27 @@ const processCheckout = async (req, res) => {
             success_url: 'https://apexvendor.netlify.app/checkout/success',
             cancel_url: 'https://apexvendor.netlify.app/checkout/failure',
     
-            //Put your Order ID here!
+            //custom config, for futher usage in webhook
             metadata: {
-                orderId: orderId.toString()
+                orderId: orderId.toString(),
+                userEmail
             }
         })
+        stripeUrl = session.url;
+        }
+
+        // send order confirmation email (only for COD orders)
+        if (paymentMethod === 'COD') {
+            await sendOrderConfirmationEmail(userEmail, orderId, netAmount, address);
+        }
+        
         // If execution reaches here, transaction committed successfully!
-        return res.status(201).json({
+        res.status(201).json({
             success: true,
             message: "Order initiated successfully",
-            url: session.url
+            url: stripeUrl
         });
+
 
     } catch (err) {
         console.error(err)

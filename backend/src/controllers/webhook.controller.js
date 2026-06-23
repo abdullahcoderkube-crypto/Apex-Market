@@ -1,8 +1,8 @@
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY); 
 const { Order, Payment } = require('../models');
+const {sendOrderConfirmationEmail} = require('../services/email.service')
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY); 
 
 const handleStripeWebhook = async (req, res) => {
-  console.log("Got inside!");
 
   const sig = req.headers['stripe-signature'];
   let event;
@@ -26,7 +26,8 @@ const handleStripeWebhook = async (req, res) => {
         const session = event.data.object;
         console.log(`💰 Payment succeeded for session: ${session.id}`);
 
-        const orderId = session.metadata.orderId;          // Your internal DB order ID
+        const orderId = session.metadata.orderId;           // Your internal DB order ID
+        const userEmail = session.metadata.userEmail;
         const transactionId = session.payment_intent;       // Stripe's unique transaction reference
         const amount = session.amount_total / 100;          // Convert cents to standard format
         const paidAt = new Date(event.created * 1000);      // Convert Unix timestamp to JS Date
@@ -48,6 +49,7 @@ const handleStripeWebhook = async (req, res) => {
           paidAt: paidAt
         });
         console.log(`💳 Payment entry created: ${userPayment.id}`);
+        await sendOrderConfirmationEmail(userEmail, orderId, amount)
         break;
 
       case 'invoice.payment_failed':

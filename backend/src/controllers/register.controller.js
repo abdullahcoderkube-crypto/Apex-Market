@@ -3,6 +3,7 @@ const sequelize = require('../db/dbConfig');
 const { User, Vendor } = require('../models');
 const path = require('path');
 const bcrypt = require('bcrypt');
+const sendWelcomeEmail = require('../services/email.service');
 require('dotenv').config({ path: path.resolve(__dirname, '../../.env') })
 
 
@@ -42,7 +43,9 @@ const registerUser = async (req, res) => {
                         phone: phoneNumber
                     })
                 }
-                return res.status(200).json({
+                // send post registeration email
+                await sendWelcomeEmail(email);
+                return res.status(201).json({
                     message: "You have been successfully registered!",
                     user: doesExist.toJSON()
                 })
@@ -62,6 +65,9 @@ const registerUser = async (req, res) => {
                 passwordHash: passwordHash
             })
 
+            // send post registeration email
+                await sendWelcomeEmail(email);
+
             res.status(201).json({
                 message: "User successfully registered!",
                 user: newUser
@@ -80,6 +86,9 @@ const registerUser = async (req, res) => {
                 storeAddress: businessAddress,
                 phone: phoneNumber
             })
+
+            // send post registeration email
+                await sendWelcomeEmail(email);
 
             const vendor = Object.assign(newUser, newVendor);
             res.status(201).json({

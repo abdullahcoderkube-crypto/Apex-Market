@@ -10,7 +10,6 @@ const getEmailTransporter = () => {
   }
 });
    
-
     return transporter
 }
 
