@@ -43,6 +43,22 @@ module.exports = (sequelize) => {
         allowNull: false,
         defaultValue: 'unpaid',
       },
+      jdShipmentId: {
+        type: DataTypes.STRING,
+        allowNull: true
+      },
+      jdAwb: {
+        type: DataTypes.STRING,
+        allowNull: true
+      },
+      jdCourier: {
+        type: DataTypes.STRING,
+        allowNull: true
+      },
+      jdLabelUrl: {
+        type: DataTypes.TEXT,
+        allowNull: true
+      },
       expiresAt: {
         type: DataTypes.DATE,
         allowNull: false,

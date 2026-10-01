@@ -6,7 +6,7 @@
   --primary: hsl(var(--primary-hsl));
   --primary-hover: hsl(250, 84%, 48%);
   --primary-glow: rgba(99, 102, 241, 0.15);
-  
+
   --secondary-hsl: 262, 83%, 58%;
   --secondary: hsl(var(--secondary-hsl));
 
@@ -15,50 +15,57 @@
   --error: #ef4444;
   --error-bg: rgba(239, 68, 68, 0.1);
   --warning: #f59e0b;
-  
-  /* Theme Colors - Sleek Dark Mode (Default) */
-  --bg-main: #0a0e17;
-  --bg-card: rgba(20, 27, 45, 0.7);
-  --bg-input: #0f1524;
-  
-  --text-main: #f3f4f6;
-  --text-muted: #9ca3af;
-  --text-inverse: #0b0f19;
-  
-  --border-color: rgba(255, 255, 255, 0.08);
-  --border-focus: rgba(99, 102, 241, 0.5);
-  
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.4);
-  --shadow-glow: 0 0 25px rgba(99, 102, 241, 0.25);
-  
+
+  /* ── Light Theme (Default) ──────────────────────────────────── */
+  --bg-main:       #f0f4ff;
+  --bg-card:       rgba(255, 255, 255, 0.9);
+  --bg-input:      #ffffff;
+
+  --text-main:     #0f172a;
+  --text-muted:    #64748b;
+  --text-inverse:  #ffffff;
+
+  --border-color:  rgba(0, 0, 0, 0.08);
+  --border-focus:  rgba(99, 102, 241, 0.4);
+
+  --shadow-sm:     0 2px 8px rgba(0, 0, 0, 0.05);
+  --shadow-md:     0 8px 24px rgba(149, 157, 165, 0.15);
+  --shadow-lg:     0 16px 40px rgba(149, 157, 165, 0.2);
+  --shadow-glow:   0 0 25px rgba(99, 102, 241, 0.12);
+
   --border-radius-sm: 8px;
   --border-radius-md: 16px;
   --border-radius-lg: 24px;
-  
-  --transition-fast: 0.2s ease;
+
+  --transition-fast:   0.2s ease;
   --transition-normal: 0.3s ease;
-  --transition-slow: 0.5s ease;
+  --transition-slow:   0.5s ease;
 }
 
-/* Fallback light mode override if user prefers light */
-@media (prefers-color-scheme: light) {
-  :root {
-    --bg-main: #f8fafc;
-    --bg-card: rgba(255, 255, 255, 0.85);
-    --bg-input: #ffffff;
-    --text-main: #0f172a;
-    --text-muted: #64748b;
-    --text-inverse: #ffffff;
-    --border-color: rgba(0, 0, 0, 0.08);
-    --border-focus: rgba(99, 102, 241, 0.4);
-    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 8px 24px rgba(149, 157, 165, 0.15);
-    --shadow-lg: 0 16px 40px rgba(149, 157, 165, 0.2);
-    --shadow-glow: 0 0 25px rgba(99, 102, 241, 0.12);
-  }
+/* ── Dark Theme ─────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --bg-main:       #0a0e17;
+  --bg-card:       rgba(20, 27, 45, 0.7);
+  --bg-input:      #0f1524;
+
+  --text-main:     #f3f4f6;
+  --text-muted:    #9ca3af;
+  --text-inverse:  #0b0f19;
+
+  --border-color:  rgba(255, 255, 255, 0.08);
+  --border-focus:  rgba(99, 102, 241, 0.5);
+
+  --shadow-sm:     0 2px 8px rgba(0, 0, 0, 0.2);
+  --shadow-md:     0 8px 24px rgba(0, 0, 0, 0.3);
+  --shadow-lg:     0 16px 40px rgba(0, 0, 0, 0.4);
+  --shadow-glow:   0 0 25px rgba(99, 102, 241, 0.25);
 }
+
+/* Smooth theme transition on all elements */
+*, *::before, *::after {
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.15s ease, box-shadow 0.25s ease;
+}
+
 
 /* Global Reset & Base Styles */
 * {

@@ -18,6 +18,7 @@ const loginUser = async (req, res) => {
                 error: "Invalid Credentials!"
             })
         }
+
         
         // check the password
         const isMatch = await bcrypt.compare(password, isValidUser.toJSON().passwordHash)

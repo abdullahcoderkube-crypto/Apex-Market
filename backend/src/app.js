@@ -43,6 +43,10 @@ app.use('/api/orders', ordersRouter);
 // for vendor analytics dashboard
 app.use('/api/vendor/', analyticsRouter);
 
+// for jd proxy 
+const jdRouter = require('./routes/jd.routes');
+app.use('/api/jd', jdRouter);
+
 // for Reviews
 app.use('/api/reviews', reviewsRouter);
 

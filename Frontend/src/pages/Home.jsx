@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../hooks/useTheme';
 import { addProduct, getProducts, getVendorOrders, getVendorInventory, updateVendorProduct, removeOrRestoreVendorProduct, updateVendorOrderStatus, getWishlist, addWishlistItem, removeWishlistItem } from '../utils/api';
 import './Home.css';
 
@@ -22,6 +23,8 @@ const INITIAL_FORM = {
 export default function Home() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { theme, toggleTheme } = useTheme();
+
   const [searchParams, setSearchParams] = useSearchParams();
   const initialQuery = searchParams.get('query') || '';
 
@@ -143,20 +146,162 @@ export default function Home() {
     }
   };
 
-  const handleUpdateStatus = async (orderId) => {
+  // ── JD Shipment Modal State ──────────────────────────────────────────────
+  const [jdShipModalOpen, setJdShipModalOpen] = useState(false);
+  const [jdModalStep, setJdModalStep] = useState(1); // 1 = pickup/weight form | 2 = courier selection
+  const [selectedOrderForJd, setSelectedOrderForJd] = useState(null);
+  const [jdPickupAddresses, setJdPickupAddresses] = useState([]);
+  const [jdPickupLoading, setJdPickupLoading] = useState(false);
+  const [jdServiceabilityLoading, setJdServiceabilityLoading] = useState(false);
+  const [availableCouriers, setAvailableCouriers] = useState([]);
+  const [selectedCourier, setSelectedCourier] = useState(null);
+  const [jdShipForm, setJdShipForm] = useState({
+      pickup_address_id: '',
+      weight: '',         // entered by user in GRAMS
+  });
+
+  // Shipment success receipt modal
+  const [shipmentSuccessOpen, setShipmentSuccessOpen] = useState(false);
+  const [shipmentSuccessData, setShipmentSuccessData] = useState(null);
+
+  const handleShipOrderClick = async (order) => {
+    setSelectedOrderForJd(order);
+    setJdShipForm({ pickup_address_id: '', weight: '' });
+    setJdModalStep(1);
+    setAvailableCouriers([]);
+    setSelectedCourier(null);
+    setJdShipModalOpen(true);
+
+    // Fetch pickup addresses in the background
+    try {
+      setJdPickupLoading(true);
+      const { getJDPickupAddresses } = await import('../utils/api');
+      const res = await getJDPickupAddresses();
+      if (res && res.data) {
+        setJdPickupAddresses(res.data);
+        if (res.data.length > 0) {
+          setJdShipForm(prev => ({ ...prev, pickup_address_id: String(res.data[0].id) }));
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load JD pickup addresses', err);
+      alert('Failed to load pickup addresses from JD API. Check your JD_BEARER_TOKEN.');
+    } finally {
+      setJdPickupLoading(false);
+    }
+  };
+
+  /** Step 1 submit: check serviceability → move to step 2 */
+  const handleCheckServiceability = async (e) => {
+    e.preventDefault();
+    if (!jdShipForm.pickup_address_id || !jdShipForm.weight) return;
+
+    const order = selectedOrderForJd;
+    const destinationPincode = order?.shippingAddress?.postalCode || order?.address?.postalCode;
+    if (!destinationPincode) {
+      alert('Cannot determine destination pincode from the order address.');
+      return;
+    }
+
+    // Find the selected pickup address object to get its pincode
+    const pickupAddr = jdPickupAddresses.find(a => String(a.id) === String(jdShipForm.pickup_address_id));
+    const pickupPincode = pickupAddr?.pincode || pickupAddr?.zip_code || pickupAddr?.postal_code;
+    if (!pickupPincode) {
+      alert('Could not determine pincode for the selected pickup address. Please check your JD pickup address configuration.');
+      return;
+    }
+
+    const paymentMode = (order?.paymentMethod === 'Stripe' || order?.payment_method === 'Stripe')
+      ? 'Prepaid' : 'COD';
+
+    try {
+      setJdServiceabilityLoading(true);
+      const { getJDServiceability } = await import('../utils/api');
+      const res = await getJDServiceability({
+        pickup_pincode: String(pickupPincode),
+        destination_pincode: String(destinationPincode),
+        weight: Number(jdShipForm.weight),    // in grams as required by JD API
+        payment_mode: paymentMode,
+        declared_value: parseFloat(order?.vendorSubtotal || order?.netAmount || 1000),
+      });
+
+      if (res && res.data && res.data.length > 0) {
+        setAvailableCouriers(res.data);
+        setSelectedCourier(res.data[0]);
+        setJdModalStep(2);
+      } else {
+        alert('No couriers available for this route. Please try a different pickup address or check pincodes.');
+      }
+    } catch (err) {
+      console.error('Serviceability check failed', err);
+      alert(err.message || 'Failed to check courier serviceability.');
+    } finally {
+      setJdServiceabilityLoading(false);
+    }
+  };
+
+  /** Step 2 submit: create shipment */
+  const handleUpdateStatus = async (e) => {
+    e.preventDefault();
+    if (!selectedCourier) return;
+    const orderId = selectedOrderForJd.id;
     try {
       setActionLoading(orderId);
-      const res = await updateVendorOrderStatus(orderId);
-      if (res && res.success) {
-        setVendorOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'shipped' } : o));
+      const { getAccessToken } = await import('../utils/api');
+      const token = getAccessToken();
+      // Use courier_code from the serviceability response (e.g. "delhivery_surface").
+      const courierCode = selectedCourier.courier_code;
+
+      const res = await fetch(`http://localhost:3000/api/vendor/orders/${orderId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          pickup_address_id: jdShipForm.pickup_address_id,
+          weight: jdShipForm.weight,
+          courier_code: courierCode,
+        })
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to create shipment');
+      }
+
+      if (data && data.success) {
+        // 1. Move order to shipped in state, and attach JD details so Processed tab can show them
+        setVendorOrders(prev => prev.map(o =>
+          o.id === orderId
+            ? { ...o, status: 'shipped', jdShipmentId: data.jdShipmentId, jdAwb: data.awb, jdCourier: data.courier, jdLabelUrl: data.label_url }
+            : o
+        ));
+
+        // 2. Close ship modal
+        setJdShipModalOpen(false);
+
+        // 3. Open success receipt modal
+        setShipmentSuccessData({
+          orderId,
+          shipmentId: data.jdShipmentId,
+          awb: data.awb,
+          courier: data.courier || selectedCourier.courier_name || selectedCourier.display_name,
+          labelUrl: data.label_url,
+        });
+        setShipmentSuccessOpen(true);
       }
     } catch (err) {
       console.error(err);
-      alert(err.message || 'Failed to update order status');
+      alert(err.message || 'Failed to create shipment');
     } finally {
       setActionLoading(null);
     }
   };
+
+
+
+
 
   // Product Edit Modal Handlers
   const handleEditProductClick = (product) => {
@@ -626,6 +771,17 @@ export default function Home() {
           >
             ⚙️ Settings
           </button>
+          {/* Theme toggle */}
+          <button
+            className={`theme-toggle${theme === 'dark' ? ' theme-toggle--dark' : ''}`}
+            onClick={toggleTheme}
+            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+          >
+            <span className="theme-toggle__icon-sun">☀️</span>
+            <span className="theme-toggle__icon-moon">🌙</span>
+            <span className="theme-toggle__thumb" />
+          </button>
           <button
             onClick={logout}
             className="btn btn-secondary"
@@ -649,7 +805,7 @@ export default function Home() {
           /* ── Vendor Dashboard ──────────────────────────────────────── */
           <>
             {/* Vendor Navigation Tabs */}
-            <div className="vendor-tabs">
+            <div className="vendor-tabs" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
               <button 
                 className={`vendor-tab-btn ${activeTab === 'overview' ? 'active' : ''}`}
                 onClick={() => setActiveTab('overview')}
@@ -703,9 +859,9 @@ export default function Home() {
                 </div>
 
                 <div className="showcase-section">
-                  <h3>Vendor Console</h3>
+                  <h3>Vendor Admin Panel</h3>
                   <p className="showcase-text">
-                    Your store is live. Start listing new products, managing inventory, or responding to customer queries.
+                    Start listing new products, manage inventory, and get the orders directly synced to your <strong><u>JDWebnShip Retailer Panel</u></strong>.
                   </p>
                   <div className="action-bar">
                     <button className="btn btn-primary" onClick={handleOpenModal} id="add-product-btn">
@@ -971,22 +1127,22 @@ export default function Home() {
                                 </div>
                                 {order.status === 'paid' && order.paymentMethod === 'Stripe' && (
                                   <button
-                                    onClick={() => handleUpdateStatus(order.id)}
+                                    onClick={() => handleShipOrderClick(order)}
                                     className="btn btn-primary btn-sm"
                                     disabled={actionLoading === order.id}
                                     style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
                                   >
-                                    {actionLoading === order.id ? 'Updating...' : 'Product Shipped'}
+                                    Ship Order
                                   </button>
                                 )}
                                 {order.status === 'unpaid' && order.paymentMethod === 'COD' && (
                                   <button
-                                    onClick={() => handleUpdateStatus(order.id)}
+                                    onClick={() => handleShipOrderClick(order)}
                                     className="btn btn-primary btn-sm"
                                     disabled={actionLoading === order.id}
                                     style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', background: 'linear-gradient(135deg, #10b981, #059669)' }}
                                   >
-                                    {actionLoading === order.id ? 'Updating...' : 'Payment received'}
+                                    Ship Order
                                   </button>
                                 )}
                               </div>
@@ -1023,7 +1179,7 @@ export default function Home() {
                   <div className="empty-state glass-panel">
                     <div className="empty-icon" style={{ fontSize: '3rem', marginBottom: '1rem' }}>📦</div>
                     <h3>No processed orders</h3>
-                    <p style={{ color: 'var(--text-muted)' }}>Orders that have been shipped or marked as payment received will show up here.</p>
+                    <p style={{ color: 'var(--text-muted)' }}>Orders that have been shipped will show up here.</p>
                   </div>
                 ) : (
                   <div className="vendor-orders-list">
@@ -1053,6 +1209,56 @@ export default function Home() {
                               </span>
                             </div>
                           </div>
+
+                          {/* ── JD Shipment Details ── */}
+                          {(order.jdAwb || order.jdShipmentId) && (
+                            <div style={{
+                              margin: '0.75rem 0',
+                              padding: '0.75rem 1rem',
+                              borderRadius: '10px',
+                              background: 'rgba(99,102,241,0.08)',
+                              border: '1px solid rgba(99,102,241,0.2)',
+                              display: 'flex',
+                              flexWrap: 'wrap',
+                              gap: '1rem',
+                              alignItems: 'center',
+                            }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                <span style={{ fontSize: '1.1rem' }}>🚚</span>
+                                <span style={{ fontWeight: 600, color: 'var(--primary)' }}>
+                                  {order.jdCourier || 'JD WebnShip'}
+                                </span>
+                              </div>
+                              {order.jdAwb && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>AWB:</span>
+                                  <code style={{ fontWeight: 700, letterSpacing: '0.05em', fontSize: '0.9rem' }}>{order.jdAwb}</code>
+                                  <button
+                                    className="btn btn-secondary btn-sm"
+                                    style={{ padding: '0.15rem 0.5rem', fontSize: '0.75rem' }}
+                                    onClick={() => navigator.clipboard.writeText(order.jdAwb)}
+                                    title="Copy AWB"
+                                  >📋 Copy</button>
+                                </div>
+                              )}
+                              {order.jdShipmentId && (
+                                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                  Shipment ID: <strong>{order.jdShipmentId}</strong>
+                                </div>
+                              )}
+                              {order.jdLabelUrl && (
+                                <a
+                                  href={order.jdLabelUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="btn btn-primary btn-sm"
+                                  style={{ padding: '0.25rem 0.75rem', fontSize: '0.8rem', textDecoration: 'none' }}
+                                >
+                                  🏷️ Label
+                                </a>
+                              )}
+                            </div>
+                          )}
 
                           <div className="order-body-grid">
                             {/* Customer and Shipping details */}
@@ -1726,7 +1932,7 @@ export default function Home() {
             {/* Modal Header */}
             <div className="modal-header">
               <div>
-                <h2 className="modal-title" id="low-stock-modal-title" style={{ color: '#ef4444' }}>⚠️ Low Stock Alert</h2>
+                <h2 className="modal-title" id="low-stock-modal-title" style={{ color: '#ef4444' }}><span style={{ WebkitTextFillColor: 'initial' }}>⚠️</span> Low Stock Alert</h2>
                 <p className="modal-subtitle">The following products have stock quantity ≤ 5</p>
               </div>
               <button className="modal-close-btn" onClick={() => setShowLowStockModal(false)} aria-label="Close modal">
@@ -1767,6 +1973,241 @@ export default function Home() {
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── JD Shipment Modal (2-step) ─────────────────────────────────────── */}
+      {jdShipModalOpen && selectedOrderForJd && (
+        <div className="modal-overlay" onClick={() => setJdShipModalOpen(false)} role="dialog" aria-modal="true" aria-labelledby="jd-ship-modal-title">
+          <div className="modal-panel glass-panel" onClick={e => e.stopPropagation()} style={{ maxWidth: '520px' }}>
+
+            {/* Header */}
+            <div className="modal-header">
+              <div>
+                <h2 className="modal-title" id="jd-ship-modal-title"><span style={{ WebkitTextFillColor: 'initial' }}>🚚</span> Ship via JD WebnShip</h2>
+                <p className="modal-subtitle">
+                  {jdModalStep === 1
+                    ? `Order ${selectedOrderForJd.id.substring(0, 8)}... — Step 1 of 2: Shipping details`
+                    : `Order ${selectedOrderForJd.id.substring(0, 8)}... — Step 2 of 2: Select courier`}
+                </p>
+              </div>
+              <button className="modal-close-btn" onClick={() => setJdShipModalOpen(false)} aria-label="Close modal">✕</button>
+            </div>
+
+            {/* Step progress bar */}
+            <div style={{ display: 'flex', gap: '0.5rem', margin: '1rem 0' }}>
+              <div style={{ flex: 1, height: '4px', borderRadius: '2px', background: 'var(--primary)', opacity: 1 }} />
+              <div style={{ flex: 1, height: '4px', borderRadius: '2px', background: 'var(--primary)', opacity: jdModalStep >= 2 ? 1 : 0.25 }} />
+            </div>
+
+            {/* ── STEP 1: Pickup address + weight ── */}
+            {jdModalStep === 1 && (
+              jdPickupLoading ? (
+                <div style={{ textAlign: 'center', padding: '2rem' }}>
+                  <div className="spinner"></div>
+                  <p style={{ marginTop: '1rem', color: 'var(--text-muted)' }}>Loading pickup addresses...</p>
+                </div>
+              ) : (
+                <form onSubmit={handleCheckServiceability} className="product-form" style={{ marginTop: '0.5rem' }}>
+                  <div className="form-group">
+                    <label className="form-label">Pickup Address</label>
+                    {jdPickupAddresses.length === 0 ? (
+                      <p style={{ color: '#ef4444', fontSize: '0.9rem' }}>⚠️ No pickup addresses found. Add one in your JD Retailer dashboard.</p>
+                    ) : (
+                      <select
+                        className="form-input form-select"
+                        value={jdShipForm.pickup_address_id}
+                        onChange={(e) => setJdShipForm({ ...jdShipForm, pickup_address_id: e.target.value })}
+                        required
+                      >
+                        <option value="" disabled>Select a pickup address</option>
+                        {jdPickupAddresses.map(addr => (
+                          <option key={addr.id} value={String(addr.id)}>
+                            {addr.warehouse_name || addr.name || `ID: ${addr.id}`}
+                            {addr.city ? ` — ${addr.city}` : ''}
+                            {addr.pincode ? ` (${addr.pincode})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">
+                      Package Weight&nbsp;
+                      <span style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: '0.85rem' }}>(in grams)</span>
+                    </label>
+                    <input
+                      type="number" step="1" min="1"
+                      className="form-input"
+                      placeholder="e.g. 500 = 500 g | 1000 = 1 kg"
+                      value={jdShipForm.weight}
+                      onChange={(e) => setJdShipForm({ ...jdShipForm, weight: e.target.value })}
+                      required
+                    />
+                    <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.3rem' }}>Enter weight in grams (1 kg = 1000 g)</p>
+                  </div>
+
+                  <div className="modal-actions" style={{ marginTop: '1.5rem' }}>
+                    <button type="button" className="btn btn-secondary" onClick={() => setJdShipModalOpen(false)}>Cancel</button>
+                    <button
+                      type="submit" className="btn btn-primary"
+                      disabled={jdServiceabilityLoading || jdPickupAddresses.length === 0 || !jdShipForm.weight}
+                    >
+                      {jdServiceabilityLoading ? 'Checking couriers...' : 'Check Available Couriers →'}
+                    </button>
+                  </div>
+                </form>
+              )
+            )}
+
+            {/* ── STEP 2: Courier selection ── */}
+            {jdModalStep === 2 && (
+              <form onSubmit={handleUpdateStatus} className="product-form" style={{ marginTop: '0.5rem' }}>
+                <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+                  {availableCouriers.length} courier{availableCouriers.length !== 1 ? 's' : ''} available. Pick one:
+                </p>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', maxHeight: '300px', overflowY: 'auto' }}>
+                  {availableCouriers.map((courier, idx) => {
+                    const isSelected = selectedCourier === courier;
+                    return (
+                      <div
+                        key={idx}
+                        onClick={() => setSelectedCourier(courier)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '0.75rem',
+                          padding: '0.75rem 1rem', borderRadius: '10px', cursor: 'pointer',
+                          border: `2px solid ${isSelected ? 'var(--primary)' : 'rgba(255,255,255,0.1)'}`,
+                          background: isSelected ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.03)',
+                          transition: 'all 0.15s'
+                        }}
+                      >
+                        {courier.logoUrl && (
+                          <img src={courier.logoUrl} alt={courier.courier_name || courier.display_name} style={{ width: '40px', height: '40px', objectFit: 'contain', borderRadius: '6px', flexShrink: 0 }} />
+                        )}
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{courier.courier_name || courier.display_name}</div>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                            {courier.service_name || courier.display_mode}
+                          </div>
+                        </div>
+                        <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--primary)', flexShrink: 0 }}>
+                          ₹{courier.total_price ?? courier.price ?? '—'}
+                        </div>
+                        {isSelected && <span style={{ color: 'var(--primary)', fontSize: '1.1rem', flexShrink: 0 }}>✓</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="modal-actions" style={{ marginTop: '1.5rem' }}>
+                  <button type="button" className="btn btn-secondary" onClick={() => setJdModalStep(1)}>← Back</button>
+                  <button
+                    type="submit" className="btn btn-primary"
+                    disabled={actionLoading === selectedOrderForJd.id || !selectedCourier}
+                  >
+                    {actionLoading === selectedOrderForJd.id ? 'Creating Shipment...' : 'Confirm Shipment'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+      {/* ── Shipment Success Receipt Modal ───────────────────────────────── */}
+      {shipmentSuccessOpen && shipmentSuccessData && (
+        <div className="modal-overlay" onClick={() => setShipmentSuccessOpen(false)} role="dialog" aria-modal="true" aria-labelledby="shipment-success-title">
+          <div className="modal-panel glass-panel" onClick={e => e.stopPropagation()} style={{ maxWidth: '480px' }}>
+
+            {/* Success header */}
+            <div style={{ textAlign: 'center', padding: '1.5rem 1rem 0.5rem' }}>
+              <div style={{ fontSize: '3.5rem', lineHeight: 1, marginBottom: '0.75rem' }}>🎉</div>
+              <h2 id="shipment-success-title" style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '0.25rem' }}>
+                Shipment Booked!
+              </h2>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                Your order has been successfully handed off to JD WebnShip.
+              </p>
+            </div>
+
+            {/* Receipt card */}
+            <div style={{
+              margin: '1.25rem 0',
+              borderRadius: '12px',
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              overflow: 'hidden',
+            }}>
+              {/* Courier banner */}
+              <div style={{
+                padding: '0.75rem 1.25rem',
+                background: 'rgba(99,102,241,0.12)',
+                borderBottom: '1px solid rgba(99,102,241,0.2)',
+                display: 'flex', alignItems: 'center', gap: '0.6rem'
+              }}>
+                <span style={{ fontSize: '1.2rem' }}>🚚</span>
+                <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--primary)' }}>
+                  {shipmentSuccessData.courier}
+                </span>
+              </div>
+
+              {/* Receipt rows */}
+              <div style={{ padding: '0.75rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.83rem', color: 'var(--text-muted)' }}>JD Shipment ID</span>
+                  <strong style={{ fontSize: '0.92rem' }}>{shipmentSuccessData.shipmentId}</strong>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.4rem' }}>
+                  <span style={{ fontSize: '0.83rem', color: 'var(--text-muted)' }}>AWB (Tracking No.)</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <code style={{ fontWeight: 800, letterSpacing: '0.06em', fontSize: '0.95rem', color: 'var(--primary)' }}>
+                      {shipmentSuccessData.awb}
+                    </code>
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      style={{ padding: '0.15rem 0.55rem', fontSize: '0.75rem' }}
+                      onClick={() => {
+                        navigator.clipboard.writeText(shipmentSuccessData.awb);
+                      }}
+                      title="Copy AWB"
+                    >📋 Copy</button>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.83rem', color: 'var(--text-muted)' }}>Order Reference</span>
+                  <code style={{ fontSize: '0.8rem' }}>{shipmentSuccessData.orderId?.substring(0, 8)}…</code>
+                </div>
+
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem' }}>
+              <button
+                className="btn btn-secondary"
+                style={{ flex: 1 }}
+                onClick={() => setShipmentSuccessOpen(false)}
+              >
+                Close
+              </button>
+              {shipmentSuccessData.labelUrl && (
+                <a
+                  href={shipmentSuccessData.labelUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn btn-primary"
+                  style={{ flex: 1, textAlign: 'center', textDecoration: 'none' }}
+                >
+                  🏷️ Open Shipping Label
+                </a>
+              )}
+            </div>
+
           </div>
         </div>
       )}

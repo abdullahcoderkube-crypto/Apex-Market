@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://74.208.194.227"
+const API_BASE_URL = process.env.NODE_ENV === 'production' ? "http://74.208.194.227" : "http://localhost:3000"
 
 let accessToken = '';
 
@@ -460,5 +460,43 @@ export async function changeUserPassword(passwordData) {
   });
   return handleResponse(response);
 }
+
+/**
+ * Get JD Pickup Addresses
+ */
+export async function getJDPickupAddresses() {
+  const token = getAccessToken();
+  const response = await fetch(`${API_BASE_URL}/api/jd/pickup-addresses`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    }
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Check JD courier serviceability for a route.
+ * @param {Object} data
+ * @param {string} data.pickup_pincode
+ * @param {string} data.destination_pincode
+ * @param {number} data.weight              - Weight in GRAMS
+ * @param {string} data.payment_mode        - "COD" or "Prepaid"
+ * @param {number} [data.declared_value]
+ */
+export async function getJDServiceability(data) {
+  const token = getAccessToken();
+  const response = await fetch(`${API_BASE_URL}/api/jd/serviceability`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data)
+  });
+  return handleResponse(response);
+}
+
 
 

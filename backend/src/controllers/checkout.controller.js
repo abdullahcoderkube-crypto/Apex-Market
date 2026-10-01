@@ -154,7 +154,7 @@ const processCheckout = async (req, res) => {
 
         // send order confirmation email to customer and new order arrived email to vendor
         if (paymentMethod === 'COD') {
-            await sendOrderConfirmationEmail(userEmail, orderId, netAmount, address);
+            //await sendOrderConfirmationEmail(userEmail, orderId, netAmount, address);
             
             // send email to vendors, regarding new order arrived
             // first clean up the array, removing duplicate ids
@@ -170,12 +170,12 @@ const processCheckout = async (req, res) => {
 
                 // send new order arrived email to vendor
                 console.log(`Sending email to: ${vendorDetail.email}`);
-                await sendOrderArrivedEmail(vendorDetail.email, vendorDetail.name);
+                //await sendOrderArrivedEmail(vendorDetail.email, vendorDetail.name);
 
                 // alert for low inventory only if matched in inventoryAlert arr
                 for (const inventory of inventoryAlert) {
                     if (inventory.vendorId === vendorId) {
-                        await sendLowInventoryEmail(vendorDetail.email, inventory.productId, inventory.stock, vendorDetail.name)
+                        //await sendLowInventoryEmail(vendorDetail.email, inventory.productId, inventory.stock, vendorDetail.name)
                     }
                 }
             }         

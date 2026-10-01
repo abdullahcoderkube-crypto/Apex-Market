@@ -1,4 +1,4 @@
-const getEmailTransporter = require('../utils/getEmailTransporter');
+/*const getEmailTransporter = require('../utils/getEmailTransporter');
 const transporter = getEmailTransporter();
 
 // welcome email 
@@ -73,4 +73,4 @@ const sendLowInventoryEmail = async (recipientEmail, productId, stock, vendorNam
     await transporter.sendMail(mailOptions)
 }
 
-module.exports = {sendWelcomeEmail, sendOrderConfirmationEmail, sendOrderShippedEmail, sendOrderCancelledEmail, sendOrderArrivedEmail, sendLowInventoryEmail};
+module.exports = {sendWelcomeEmail, sendOrderConfirmationEmail, sendOrderShippedEmail, sendOrderCancelledEmail, sendOrderArrivedEmail, sendLowInventoryEmail};*/
