@@ -1,5 +1,5 @@
 const express = require('express');
-const { getPickupAddresses, getServiceability } = require('../services/jdApiService');
+const { getPickupAddresses, getServiceability, getWeights } = require('../services/jdApiService');
 const authMiddleware = require('../middlewares/auth.middleware');
 const router = express.Router();
 
@@ -51,6 +51,20 @@ router.post('/serviceability', authMiddleware, async (req, res) => {
     } catch (err) {
         console.error('[JD Route] serviceability error:', err.message);
         res.status(500).json({ error: err.message || 'Failed to check serviceability' });
+    }
+});
+
+/**
+ * GET /api/jd/weights
+ * Proxies the JD WebnShip weight categories to the frontend.
+ */
+router.get('/weights', authMiddleware, async (req, res) => {
+    try {
+        const response = await getWeights();
+        res.status(200).json(response);
+    } catch (err) {
+        console.error('[JD Route] weights error:', err.message);
+        res.status(500).json({ error: err.message || 'Failed to fetch weight options' });
     }
 });
 
