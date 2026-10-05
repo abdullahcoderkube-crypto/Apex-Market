@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../hooks/useTheme';
-import { addProduct, getProducts, getVendorOrders, getVendorInventory, updateVendorProduct, removeOrRestoreVendorProduct, updateVendorOrderStatus, getWishlist, addWishlistItem, removeWishlistItem } from '../utils/api';
+import { addProduct, getProducts, getVendorOrders, getVendorInventory, updateVendorProduct, removeOrRestoreVendorProduct, updateVendorOrderStatus, getWishlist, addWishlistItem, removeWishlistItem, getJDPickupAddresses, getJDServiceability, getJDWeights } from '../utils/api';
+
 import './Home.css';
 
 const CATEGORIES = [
@@ -157,8 +158,10 @@ export default function Home() {
   const [selectedCourier, setSelectedCourier] = useState(null);
   const [jdShipForm, setJdShipForm] = useState({
       pickup_address_id: '',
-      weight: '',         // entered by user in GRAMS
+      weight: '',         // value in grams, selected from JD weights dropdown
   });
+  const [jdWeightOptions, setJdWeightOptions] = useState([]);
+  const [jdWeightsLoading, setJdWeightsLoading] = useState(false);
 
   // Shipment success receipt modal
   const [shipmentSuccessOpen, setShipmentSuccessOpen] = useState(false);
@@ -172,22 +175,39 @@ export default function Home() {
     setSelectedCourier(null);
     setJdShipModalOpen(true);
 
-    // Fetch pickup addresses in the background
+    // Fetch pickup addresses and weight options in parallel
+    setJdPickupLoading(true);
+    setJdWeightsLoading(true);
     try {
-      setJdPickupLoading(true);
-      const { getJDPickupAddresses } = await import('../utils/api');
-      const res = await getJDPickupAddresses();
-      if (res && res.data) {
-        setJdPickupAddresses(res.data);
-        if (res.data.length > 0) {
-          setJdShipForm(prev => ({ ...prev, pickup_address_id: String(res.data[0].id) }));
-        }
+      const [addrRes, weightRes] = await Promise.all([
+        getJDPickupAddresses(),
+        getJDWeights(),
+      ]);
+
+      // Pickup addresses
+      const addrs = addrRes?.data ?? addrRes ?? [];
+      const addrArr = Array.isArray(addrs) ? addrs : [];
+      setJdPickupAddresses(addrArr);
+      if (addrArr.length > 0) {
+        setJdShipForm(prev => ({ ...prev, pickup_address_id: String(addrArr[0].id) }));
       }
+
+      // Weight options — JD returns { id, name: "500G", weight: 0.5 } (weight in KG)
+      // Convert to grams for the serviceability API (weight * 1000)
+      const rawWeights = weightRes?.data ?? weightRes ?? [];
+      const weights = Array.isArray(rawWeights) ? rawWeights.map(w => ({
+        id:    w.id,
+        label: w.name,              // e.g. "500G", "1KG", "2KG"
+        grams: Math.round(w.weight * 1000), // convert KG → grams
+      })) : [];
+      setJdWeightOptions(weights);
     } catch (err) {
-      console.error('Failed to load JD pickup addresses', err);
-      alert('Failed to load pickup addresses from JD API. Check your JD_BEARER_TOKEN.');
+      console.error('Failed to load JD modal data:', err);
+      setJdPickupAddresses([]);
+      setJdWeightOptions([]);
     } finally {
       setJdPickupLoading(false);
+      setJdWeightsLoading(false);
     }
   };
 
@@ -2035,25 +2055,37 @@ export default function Home() {
 
                   <div className="form-group">
                     <label className="form-label">
-                      Package Weight&nbsp;
-                      <span style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: '0.85rem' }}>(in grams)</span>
+                      Package Weight
                     </label>
-                    <input
-                      type="number" step="1" min="1"
-                      className="form-input"
-                      placeholder="e.g. 500 = 500 g | 1000 = 1 kg"
-                      value={jdShipForm.weight}
-                      onChange={(e) => setJdShipForm({ ...jdShipForm, weight: e.target.value })}
-                      required
-                    />
-                    <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.3rem' }}>Enter weight in grams (1 kg = 1000 g)</p>
+                    {jdWeightsLoading ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.75rem 0' }}>
+                        <div className="spinner" style={{ width: '18px', height: '18px', borderWidth: '2px' }} />
+                        <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Loading weight options...</span>
+                      </div>
+                    ) : jdWeightOptions.length === 0 ? (
+                      <p style={{ color: '#ef4444', fontSize: '0.9rem' }}>⚠️ Could not load weight options. Please try again.</p>
+                    ) : (
+                      <select
+                        className="form-input form-select"
+                        value={jdShipForm.weight}
+                        onChange={(e) => setJdShipForm({ ...jdShipForm, weight: e.target.value })}
+                        required
+                      >
+                        <option value="" disabled>Select package weight</option>
+                        {jdWeightOptions.map(w => (
+                          <option key={w.id ?? w.label} value={String(w.grams)}>
+                            {w.label}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
 
                   <div className="modal-actions" style={{ marginTop: '1.5rem' }}>
                     <button type="button" className="btn btn-secondary" onClick={() => setJdShipModalOpen(false)}>Cancel</button>
                     <button
                       type="submit" className="btn btn-primary"
-                      disabled={jdServiceabilityLoading || jdPickupAddresses.length === 0 || !jdShipForm.weight}
+                   disabled={jdServiceabilityLoading || jdPickupAddresses.length === 0 || !jdShipForm.weight || jdWeightsLoading}
                     >
                       {jdServiceabilityLoading ? 'Checking couriers...' : 'Check Available Couriers →'}
                     </button>

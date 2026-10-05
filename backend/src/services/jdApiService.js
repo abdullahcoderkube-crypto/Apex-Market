@@ -160,6 +160,9 @@ const jdApiRequest = async (method, endpoint, data = null) => {
 const getPickupAddresses = async () =>
     jdApiRequest('GET', '/pickup-addresses');
 
+const getWeights = async () =>
+    jdApiRequest('GET', '/weights');
+
 const getServiceability = async (params) =>
     jdApiRequest('POST', '/couriers/serviceability', params);
 
@@ -169,6 +172,7 @@ const createShipment = async (shipmentData) =>
 module.exports = {
     jdApiRequest,
     getPickupAddresses,
+    getWeights,
     getServiceability,
     createShipment,
 };

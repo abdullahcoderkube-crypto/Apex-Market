@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NODE_ENV === 'production' ? "http://74.208.194.227" : "http://localhost:3000"
+const API_BASE_URL = process.env.NODE_ENV === 'production' ? "" : "http://localhost:3000"
 
 let accessToken = '';
 
@@ -497,6 +497,23 @@ export async function getJDServiceability(data) {
   });
   return handleResponse(response);
 }
+
+/**
+ * Get JD Weight Options
+ * Returns the list of predefined weight slabs from JD WebnShip.
+ */
+export async function getJDWeights() {
+  const token = getAccessToken();
+  const response = await fetch(`${API_BASE_URL}/api/jd/weights`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    }
+  });
+  return handleResponse(response);
+}
+
 
 
 
